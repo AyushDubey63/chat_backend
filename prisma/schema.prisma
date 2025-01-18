@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  user_id                     Int   @id @default(autoincrement())
+  user_name                   String
+  email                       String?  @unique
+  password                    String?
+  first_name                  String?
+  last_name                   String?
+  phone_number                String?  @db.VarChar(15)
+  profile_pic                 String?  @db.VarChar(255)
+  bio                         String?
+  status                      String?  @db.VarChar(50)
+  theme                       String?  @db.VarChar(50)
+  last_seen                   DateTime?
+  is_deleted                  Boolean? @default(false)
+  is_verified                 Boolean? @default(false)
+  verification_token          String?
+  verification_token_expiry   DateTime?
+  reset_password_token        String?
+  reset_password_token_expiry DateTime?
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+  contacts                    Int[]
+
+  // Relations
+  sent_messages               Message[]       @relation("UserMessages")
+  chat_participations         Participants[]  @relation("UserChats")
+
+
+  @@map("users")
+}
+
+model Chat {
+  chat_id      Int            @id @default(autoincrement())
+  chat_type    String?        @db.VarChar(50)
+  created_at   DateTime?      @db.Timestamp(0)
+
+  // Relations
+  participants Participants[] @relation("ChatParticipants")
+  messages     Message[]      @relation("ChatMessages")
+
+  @@map("chats")
+}
+
+model Message {
+  message_id   Int       @id @default(autoincrement())
+  chat_id      Int
+  sender_id    Int
+  message_text String    @db.Text
+  message_type String?   @db.VarChar(50)
+  timestamp    DateTime? @db.Timestamp(0)
+  is_seen      Boolean?  @default(false)
+  is_seen_at   DateTime?
+
+  // Relations
+  chat         Chat      @relation("ChatMessages", fields: [chat_id], references: [chat_id])
+  sender       User      @relation("UserMessages", fields: [sender_id], references: [user_id])
+
+  @@map("messages")
+}
+
+model Participants {
+  chat_id Int
+  user_id Int
+
+  // Relations
+  chat Chat @relation("ChatParticipants", fields: [chat_id], references: [chat_id])
+  user User @relation("UserChats", fields: [user_id], references: [user_id])
+
+  @@id([chat_id, user_id])
+}
+// model Contact{
+//   contact_id Int @id @default(autoincrement())
+//   user_id Int
+//   contact_user_id Int
+//   created_at DateTime @default(now())
+
+//   // Relations
+//   user User @relation(fields: [user_id], references: [user_id])
+//   contact_user User @relation("ContactUser", fields: [contact_user_id], references: [user_id])
+
+//   @@map("contacts")
+// }
