@@ -1,3 +1,4 @@
+import { db } from "../config/databaseConfig.js";
 import { decryptData } from "../utils/serializeData.js";
 import jwt from "jsonwebtoken";
 class SocketHandler {
@@ -24,30 +25,63 @@ class SocketHandler {
         console.error("Token is missing in the cookie");
         return;
       }
-
+      let userid = null;
       try {
         console.log(String(token), 28);
         console.log(decryptData(String(token)), 29);
-        const userid = jwt.verify(decryptData(token), process.env.JWT_SECRET);
+        userid = jwt.verify(decryptData(token), process.env.JWT_SECRET);
         console.log(userid);
         this.userMapping(userid.userId, socket.id);
       } catch (error) {
         console.error("Error verifying JWT:", error);
       }
 
-      const user_id = decryptData(socket?.handshake?.auth?.user_id);
-      if (!user_id) {
+      if (!userid) {
         console.error("No user_id found in handshake");
         return;
       }
-      console.log("A user connected:", user_id);
+      console.log("A user connected:", userid);
 
-      socket.on("send_message", ({ message, receiver_id }) => {
-        console.log("Message received:", message, receiver_id);
-        const socket_id = this.socketIOMapping.get(receiver_id);
-        socket
-          .to(socket_id)
-          .emit("receive_message", { message, sender_id: user_id });
+      socket.on("message_event", async ({ message, chat_data }) => {
+        console.log("Message received:", message, chat_data);
+
+        // Make sure to use the correct `userId` that should be the sender's ID
+        // Assuming you have a userId available via some session or auth mechanism
+        const senderId = userid.userId; // Or directly use the variable where userId is stored
+
+        console.log("Sender User ID:", senderId);
+
+        try {
+          // Insert the new message into the database
+          const [new_message] = await db("messages")
+            .insert({
+              chat_id: chat_data.chat_id,
+              sender_id: senderId, // Sender is the authenticated user
+              message,
+            })
+            .returning("*"); // Returning the inserted message object
+
+          console.log("New message inserted with ID:", new_message.id);
+
+          // Assuming chat_data contains the recipient user ID to send the message to
+          const recipientSocketId = this.socketIOMapping.get(chat_data.user_id);
+
+          if (recipientSocketId) {
+            // Emit the message to the recipient's socket
+            socket.to(recipientSocketId).emit("message_event", {
+              message: new_message.message,
+              sender_id: senderId,
+              chat_id: chat_data.chat_id,
+            });
+          } else {
+            console.log(
+              "Recipient socket ID not found for user_id:",
+              chat_data.user_id
+            );
+          }
+        } catch (error) {
+          console.error("Error handling send_message:", error);
+        }
       });
 
       // Handle user disconnect

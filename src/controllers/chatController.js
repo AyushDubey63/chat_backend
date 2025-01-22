@@ -1,0 +1,108 @@
+import { db } from "../config/databaseConfig.js";
+import APIResponse from "../utils/APIResponse.js";
+import { ErrorHandler } from "../utils/errorHandler.js";
+import { getCountForQuery } from "../utils/helper.js";
+
+const getChatMessagesByChatId = async (req, res, next) => {
+  const { chat_id, page = 1, limit = 25 } = req.query;
+  const skip = parseInt((page - 1) * limit);
+  console.log(page, limit, skip, 9);
+  try {
+    // Query to count the total messages
+    const countResult = await db("messages as m")
+      .where("m.chat_id", chat_id)
+      .count("m.id as total_messages")
+      .first(); // Use first() to get the result as a single row
+
+    // Query to fetch paginated messages
+    const messages = await db("messages as m")
+      .select("*")
+      .where("m.chat_id", chat_id)
+      .orderBy("m.created_at", "desc")
+      .limit(limit)
+      .offset(skip)
+      .debug(true);
+
+    if (!messages.length) {
+      return next(new ErrorHandler("No messages found for this chat", 404));
+    }
+
+    const totalMessages = countResult ? countResult.total_messages : 0;
+    const totalPages = Math.ceil(totalMessages / limit);
+
+    return res.status(200).json({
+      status_code: 200,
+      message: "Messages fetched successfully",
+      data: {
+        messages: messages.reverse(),
+        total_messages: totalMessages,
+        total_pages: totalPages,
+        current_page: page,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+const getUserAllChats = async (req, res, next) => {
+  const userId = req.userId;
+  const { page = 1, limit = 20 } = req.query;
+  const skip = parseInt((page - 1) * limit);
+
+  try {
+    console.time("user_chats");
+
+    // Base query for fetching chats (without limit and offset)
+    const baseQuery = db("chat_participants as cp")
+      .innerJoin("chats as c", "cp.chat_id", "c.id")
+      .innerJoin("chat_participants as cp2", "c.id", "cp2.chat_id")
+      .leftJoin("users as u", "cp2.user_id", "u.user_id")
+      .where("cp.user_id", userId)
+      .andWhere("cp2.user_id", "!=", userId);
+
+    // Clone the query for counting to avoid the side effects of limit and offset
+    const countQuery = baseQuery
+      .clone()
+      .count("cp.chat_id as total_chats")
+      .first();
+
+    // Get the chats data with limit and offset applied
+    const result = await baseQuery
+      .distinct("c.id as chat_id", "u.user_id", "u.user_name", "u.profile_pic")
+      .limit(parseInt(limit))
+      .offset(skip)
+      .debug(true);
+
+    // Get the total count using the cloned query (without limit and offset)
+    const countResult = await countQuery;
+
+    console.timeEnd("user_chats");
+
+    if (!result.length) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+
+    // Prepare the final response object
+    const responseData = {
+      chats: result,
+      total_chats: countResult ? countResult.total_chats : 0,
+      total_pages: Math.ceil(countResult.total_chats / limit), // Calculate total pages based on total count and limit
+      current_page: page,
+    };
+
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "User details fetched successfully",
+      data: responseData,
+    });
+
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+export { getChatMessagesByChatId, getUserAllChats };

@@ -9,6 +9,7 @@ import SocketHandler from "./src/helpers/socketExport.js";
 import errorMiddleWare from "./src/middlewares/errorMiddleware.js";
 
 import userRoutes from "./src/routes/userRoutes.js";
+import chatRoutes from "./src/routes/chatRoutes.js";
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -38,6 +39,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/chat", chatRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found", route: req.originalUrl });

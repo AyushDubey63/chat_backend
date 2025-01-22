@@ -36,61 +36,38 @@ model User {
   contacts                    Int[]
 
   // Relations
-  sent_messages               Message[]       @relation("UserMessages")
-  chat_participations         Participants[]  @relation("UserChats")
-
+ participants_one Participants[] @relation("UserOne")
+  participants_two Participants[] @relation("UserTwo")
+messages   Message[]
 
   @@map("users")
 }
-
 model Chat {
-  chat_id      Int            @id @default(autoincrement())
-  chat_type    String?        @db.VarChar(50)
-  created_at   DateTime?      @db.Timestamp(0)
-
-  // Relations
-  participants Participants[] @relation("ChatParticipants")
-  messages     Message[]      @relation("ChatMessages")
-
-  @@map("chats")
+  id Int @id @default(autoincrement())
+  participants Participants[]
+  messages Message[]
 }
 
-model Message {
-  message_id   Int       @id @default(autoincrement())
-  chat_id      Int
-  sender_id    Int
-  message_text String    @db.Text
-  message_type String?   @db.VarChar(50)
-  timestamp    DateTime? @db.Timestamp(0)
-  is_seen      Boolean?  @default(false)
-  is_seen_at   DateTime?
+model Participants{
+  id Int @id @default(autoincrement())
+  user1 Int
+  user2 Int
+  chat_id Int
+ user_one User   @relation("UserOne", fields: [user1], references: [user_id])
+  user_two User   @relation("UserTwo", fields: [user2], references: [user_id])
+chat Chat @relation(fields: [chat_id], references: [id])  
+        
+}
 
-  // Relations
-  chat         Chat      @relation("ChatMessages", fields: [chat_id], references: [chat_id])
-  sender       User      @relation("UserMessages", fields: [sender_id], references: [user_id])
+model Message{
+id Int @id @default(autoincrement())
+chat_id Int
+sender_id Int
+message String
+created_at DateTime @default(now())
+
+chat Chat @relation(fields: [chat_id], references: [id])
+sender User @relation(fields: [sender_id], references: [user_id])
 
   @@map("messages")
 }
-
-model Participants {
-  chat_id Int
-  user_id Int
-
-  // Relations
-  chat Chat @relation("ChatParticipants", fields: [chat_id], references: [chat_id])
-  user User @relation("UserChats", fields: [user_id], references: [user_id])
-
-  @@id([chat_id, user_id])
-}
-// model Contact{
-//   contact_id Int @id @default(autoincrement())
-//   user_id Int
-//   contact_user_id Int
-//   created_at DateTime @default(now())
-
-//   // Relations
-//   user User @relation(fields: [user_id], references: [user_id])
-//   contact_user User @relation("ContactUser", fields: [contact_user_id], references: [user_id])
-
-//   @@map("contacts")
-// }
