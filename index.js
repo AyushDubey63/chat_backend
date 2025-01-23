@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import SocketHandler from "./src/helpers/socketExport.js";
 import errorMiddleWare from "./src/middlewares/errorMiddleware.js";
 
+import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
 const app = express();
@@ -38,6 +39,7 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/chat", chatRoutes);
 
