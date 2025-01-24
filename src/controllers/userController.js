@@ -1,5 +1,37 @@
 import { ErrorHandler } from "../utils/errorHandler.js";
 import APIResponse from "../utils/APIResponse.js";
+import { db } from "../config/databaseConfig.js";
+
+const searchUsers = async (req, res, next) => {
+  const { search } = req.query;
+  try {
+    const result = await db("users as u")
+      .whereRaw("CONCAT(u.first_name, ' ', u.last_name) LIKE ?", [
+        `%${search}%`,
+      ])
+      .orWhereILike("u.email", `%${search}%`)
+      .orWhereILike("u.phone_number", `%${search}%`)
+      .orWhereILike("u.user_name", `%${search}%`);
+
+    if (result.length === 0) {
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "No users found",
+        data: [],
+      });
+      return res.status(200).json(apiResponse);
+    }
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "Users fetched successfully",
+      data: result,
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
 
 const getUserDetails = async (req, res, next) => {
   const userId = req.userId;
@@ -41,4 +73,4 @@ const getUserDetails = async (req, res, next) => {
   }
 };
 
-export { getUserDetails };
+export { getUserDetails, searchUsers };

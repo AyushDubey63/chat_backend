@@ -24,7 +24,10 @@ const getChatMessagesByChatId = async (req, res, next) => {
       .debug(true);
 
     if (!messages.length) {
-      return next(new ErrorHandler("No messages found for this chat", 404));
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "No chats messages found",
+      });
     }
 
     const totalMessages = countResult ? countResult.total_messages : 0;
@@ -81,7 +84,13 @@ const getUserAllChats = async (req, res, next) => {
     console.timeEnd("user_chats");
 
     if (!result.length) {
-      return next(new ErrorHandler("User not found", 404));
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "No chats found",
+        data: { chats: [], total_chats: 0, total_pages: 0, current_page: 1 },
+      });
+
+      return res.status(200).json(apiResponse);
     }
 
     // Prepare the final response object
