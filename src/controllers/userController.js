@@ -6,12 +6,20 @@ const searchUsers = async (req, res, next) => {
   const { search } = req.query;
   try {
     const result = await db("users as u")
+      .select(
+        "u.user_id",
+        "u.user_name",
+        "u.profile_pic",
+        db.raw("CONCAT(u.first_name, ' ', u.last_name) as full_name"),
+        "u.email"
+      )
       .whereRaw("CONCAT(u.first_name, ' ', u.last_name) LIKE ?", [
         `%${search}%`,
       ])
       .orWhereILike("u.email", `%${search}%`)
       .orWhereILike("u.phone_number", `%${search}%`)
-      .orWhereILike("u.user_name", `%${search}%`);
+      .orWhereILike("u.user_name", `%${search}%`)
+      .debug(true);
 
     if (result.length === 0) {
       const apiResponse = new APIResponse({

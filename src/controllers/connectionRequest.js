@@ -1,0 +1,40 @@
+import { db } from "../config/databaseConfig.js";
+import APIResponse from "../utils/APIResponse.js";
+import { ErrorHandler } from "../utils/errorHandler.js";
+
+const getAllConnectionRequests = async (req, res, next) => {
+  const userId = req.userId;
+  try {
+    const connectionRequests = await db("users as u")
+      .select(
+        "cr.request_id",
+        "cr.sender_id",
+        "cr.receiver_id",
+        "cr.status",
+        "u.user_name",
+        "u.profile_pic"
+      )
+      .join("connection_requests as cr", "u.user_id", "cr.receiver_id")
+      .where("u.user_id", userId)
+      .debug(true);
+    if (connectionRequests.length === 0) {
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "No connection requests found",
+        data: [],
+      });
+      return res.status(200).json(apiResponse);
+    }
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "Connection requests fetched successfully",
+      data: connectionRequests,
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+export { getAllConnectionRequests };
