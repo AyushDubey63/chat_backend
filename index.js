@@ -12,6 +12,7 @@ import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
 import connectRequestRoutes from "./src/routes/connectionRequestRoutes.js";
+import notificationRoutes from "./src/routes/notificationRoutes.js";
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -44,6 +45,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/request", connectRequestRoutes);
+app.use("/api/v1/notification", notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found", route: req.originalUrl });

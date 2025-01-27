@@ -83,7 +83,44 @@ class SocketHandler {
           console.error("Error handling send_message:", error);
         }
       });
-
+      socket.on("notification", async ({ message_data }) => {
+        const senderId = userid.userId;
+        const recipientSocketId = this.socketIOMapping.get(
+          message_data.receiver_id
+        );
+        if (message_data.type === "chat_request") {
+          db("connection_requests")
+            .insert({
+              sender_id: senderId,
+              receiver_id: message_data.receiver_id,
+              status: message_data.status,
+            })
+            .returning("*");
+        }
+        db("notifications")
+          .insert({
+            sender_id: senderId,
+            receiver_id: message_data.receiver_id,
+            message: message_data.message,
+            type: message_data.type,
+          })
+          .returning("*");
+        if (recipientSocketId) {
+          // Emit the message to the recipient's socket
+          socket.to(recipientSocketId).emit("notification", {
+            message: message_data.message,
+            sender_id: senderId,
+            chat_id: message_data.chat_id,
+            type: message_data.type,
+            status: message_data.status,
+          });
+        } else {
+          console.log(
+            "Recipient socket ID not found for user_id:",
+            message_data.receiver_id
+          );
+        }
+      });
       // Handle user disconnect
       socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
