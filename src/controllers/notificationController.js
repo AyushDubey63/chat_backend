@@ -1,22 +1,29 @@
 import { db } from "../config/databaseConfig.js";
 import APIResponse from "../utils/APIResponse.js";
+import { ErrorHandler } from "../utils/errorHandler.js";
 
-const getAllUsersNotifications = async (req, res) => {
+const getAllUsersNotifications = async (req, res, next) => {
   const userId = req.userId;
   try {
+    console.log(req.userId, 8);
     const notifications = await db("notifications as n")
       .select(
-        db.raw("CONCAT(u.user_name ,' ',n.message) as notifications"),
-        "n.type"
+        "n.notification_id",
+        db.raw("CONCAT(u.user_name ,' ',n.message) as notification"),
+        "n.type",
+        "u.profile_pic"
       )
       .where("n.receiver_id", userId)
-      .join("users as u", "n.sender_id", "u.user_id")
-      .orderBy("n.created_at", "desc");
+      .leftJoin("users as u", "n.sender_id", "u.user_id")
+      .orderBy("n.created_at", "desc")
+      .debug(true);
     if (notifications.length === 0) {
       const apiResponse = new APIResponse({
         status_code: 200,
         message: "No notifications found",
-        data: [],
+        data: {
+          notifications: [],
+        },
       });
       return res.status(200).json(apiResponse);
     }

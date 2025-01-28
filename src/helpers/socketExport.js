@@ -83,8 +83,9 @@ class SocketHandler {
           console.error("Error handling send_message:", error);
         }
       });
-      socket.on("notification", async ({ message_data }) => {
+      socket.on("notification", async ({ receiver_id, type, message }) => {
         const senderId = userid.userId;
+        console.log("Notification received:", receiver_id, type, senderId);
         const recipientSocketId = this.socketIOMapping.get(
           message_data.receiver_id
         );

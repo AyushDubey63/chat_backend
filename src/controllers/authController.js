@@ -49,7 +49,18 @@ const loginUser = async (req, res, next) => {
     console.log(password, 39);
 
     // Find the user by email using Knex
-    const user = await db("users").where({ email }).first();
+    const user = await db("users")
+      .select(
+        "user_id",
+        "user_name",
+        "email",
+        "password",
+        "first_name",
+        "last_name",
+        "profile_pic"
+      )
+      .where({ email })
+      .first();
 
     if (!user) {
       return next(new ErrorHandler("Invalid Credentials", 401));
@@ -63,14 +74,14 @@ const loginUser = async (req, res, next) => {
       return next(new ErrorHandler("Invalid Credentials", 401));
     }
 
+    const token = generateToken({ userId: user.user_id });
+    delete user.password;
+    delete user.user_id;
     const apiResponse = new APIResponse({
       status_code: 200,
       message: "User logged in successfully",
       data: user,
     });
-
-    const token = generateToken({ userId: user.user_id });
-
     return res
       .cookie("token", encryptData(token), {
         httpOnly: true,
