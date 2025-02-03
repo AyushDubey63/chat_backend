@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
@@ -36,7 +37,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(morgan("dev"));
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });

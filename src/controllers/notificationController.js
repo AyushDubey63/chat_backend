@@ -9,7 +9,7 @@ const getAllUsersNotifications = async (req, res, next) => {
     const notifications = await db("notifications as n")
       .select(
         "n.notification_id",
-        db.raw("CONCAT(u.user_name ,' ',n.message) as notification"),
+        db.raw("CONCAT(n.message,' ',u.user_name ) as notification"),
         "n.type",
         "u.profile_pic"
       )

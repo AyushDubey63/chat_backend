@@ -83,45 +83,98 @@ class SocketHandler {
           console.error("Error handling send_message:", error);
         }
       });
-      socket.on("notification", async ({ receiver_id, type, message }) => {
-        const senderId = userid.userId;
-        console.log("Notification received:", receiver_id, type, senderId);
-        const recipientSocketId = this.socketIOMapping.get(
-          message_data.receiver_id
-        );
-        if (message_data.type === "chat_request") {
-          db("connection_requests")
-            .insert({
-              sender_id: senderId,
-              receiver_id: message_data.receiver_id,
-              status: message_data.status,
-            })
-            .returning("*");
-        }
-        db("notifications")
-          .insert({
-            sender_id: senderId,
-            receiver_id: message_data.receiver_id,
-            message: message_data.message,
-            type: message_data.type,
-          })
-          .returning("*");
-        if (recipientSocketId) {
-          // Emit the message to the recipient's socket
-          socket.to(recipientSocketId).emit("notification", {
-            message: message_data.message,
-            sender_id: senderId,
-            chat_id: message_data.chat_id,
-            type: message_data.type,
-            status: message_data.status,
+      socket.on("notification", async ({ receiver_id, type, message_data }) => {
+        console.log(receiver_id, type, message_data, 87);
+        try {
+          const senderId = userid.userId;
+          console.log("Notification received:", receiver_id, type, senderId);
+
+          // Validate required fields
+          if (!receiver_id || !type || !message_data) {
+            console.error("Invalid notification payload");
+            return;
+          }
+
+          // Handle chat requests and acceptances
+          if (type === "chat_request" || type === "chat_accept") {
+            let request;
+            let notification;
+
+            try {
+              // Insert or update connection request
+              if (type === "chat_request") {
+                // Create a new connection request
+                [request] = await db("connection_requests")
+                  .insert({
+                    sender_id: senderId,
+                    receiver_id: receiver_id,
+                    status: message_data.status || "pending",
+                  })
+                  .returning("*");
+
+                // Prepare notification message
+                notification = {
+                  sender_id: senderId,
+                  receiver_id: receiver_id,
+                  message: "You have a new chat request",
+                  type: type,
+                };
+              } else {
+                // Update existing connection request (accepting)
+                [request] = await db("connection_requests")
+                  .where({ id: message_data.request_id })
+                  .update({ status: "accepted" })
+                  .returning("*");
+
+                // Prepare notification message
+                notification = {
+                  sender_id: senderId,
+                  receiver_id: receiver_id,
+                  message: "Chat request accepted",
+                  type: type,
+                };
+              }
+              console.log(notification, 139);
+              // Insert notification into the database
+              const [notificationResult] = await db("notifications")
+                .insert(notification)
+                .returning("*");
+
+              // Send real-time notification to the recipient if online
+              const recipientSocketId = this.socketIOMapping.get(receiver_id);
+              if (recipientSocketId) {
+                socket.to(recipientSocketId).emit("notification", {
+                  ...notificationResult,
+                  sender_id: senderId,
+                  receiver_id: receiver_id, // Include receiver ID
+                });
+              } else {
+                console.log("Recipient offline:", receiver_id);
+              }
+
+              // Send confirmation to sender
+              socket.to(this.userMapping(senderId)).emit("notification", {
+                ...notification,
+              });
+            } catch (error) {
+              console.error("Database operation failed:", error);
+
+              // Send error notification to the sender if database operation fails
+              socket.to(this.userMapping(senderId)).emit("notification", {
+                success: false,
+                error: "Failed to process notification. Please try again.",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Notification error:", error);
+          socket.emit("notification", {
+            success: false,
+            error: "Failed to process notification",
           });
-        } else {
-          console.log(
-            "Recipient socket ID not found for user_id:",
-            message_data.receiver_id
-          );
         }
       });
+
       // Handle user disconnect
       socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
