@@ -122,7 +122,7 @@ class SocketHandler {
               } else {
                 // Update existing connection request (accepting)
                 [request] = await db("connection_requests")
-                  .where({ id: message_data.request_id })
+                  .where({ request_id: message_data.request_id })
                   .update({ status: "accepted" })
                   .returning("*");
 

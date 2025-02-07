@@ -17,6 +17,7 @@ const getAllConnectionRequestReceived = async (req, res, next) => {
       .join("connection_requests as cr", "u.user_id", "cr.receiver_id")
       .join("users as u2", "cr.sender_id", "u2.user_id")
       .where("u.user_id", userId)
+      .andWhere("cr.status", "pending")
       .debug(true);
     if (connectionRequests.length === 0) {
       const apiResponse = new APIResponse({
@@ -54,6 +55,7 @@ const getAllConnectionRequestSent = async (req, res, next) => {
       .join("connection_requests as cr", "u.user_id", "cr.sender_id")
       .join("users as u2", "cr.receiver_id", "u2.user_id")
       .where("u.user_id", userId)
+      .andWhere("cr.status", "pending")
       .debug(true);
     if (connectionRequests.length === 0) {
       const apiResponse = new APIResponse({
