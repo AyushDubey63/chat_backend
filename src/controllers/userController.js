@@ -4,6 +4,7 @@ import { db } from "../config/databaseConfig.js";
 
 const searchUsers = async (req, res, next) => {
   const { search } = req.query;
+  const userId = req.userId;
   try {
     const result = await db("users as u")
       .select(
@@ -13,12 +14,16 @@ const searchUsers = async (req, res, next) => {
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as full_name"),
         "u.email"
       )
-      .whereRaw("CONCAT(u.first_name, ' ', u.last_name) LIKE ?", [
-        `%${search}%`,
-      ])
-      .orWhereILike("u.email", `%${search}%`)
-      .orWhereILike("u.phone_number", `%${search}%`)
-      .orWhereILike("u.user_name", `%${search}%`)
+      .whereNot("u.user_id", userId) // Exclude the current user's own ID
+      .andWhere(function () {
+        // Group all the search conditions together
+        this.whereRaw("CONCAT(u.first_name, ' ', u.last_name) LIKE ?", [
+          `%${search}%`,
+        ])
+          .orWhereILike("u.email", `%${search}%`)
+          .orWhereILike("u.phone_number", `%${search}%`)
+          .orWhereILike("u.user_name", `%${search}%`);
+      })
       .debug(true);
 
     if (result.length === 0) {

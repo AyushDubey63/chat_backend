@@ -126,6 +126,22 @@ class SocketHandler {
                   .update({ status: "accepted" })
                   .returning("*");
 
+                const chat = await db("chats")
+                  .insert({
+                    type: "direct",
+                  })
+                  .returning("*");
+                console.log(chat, 134);
+                await db("chat_participants").insert({
+                  chat_id: chat[0].id,
+                  user_id: senderId,
+                });
+
+                await db("chat_participants").insert({
+                  chat_id: chat[0].id,
+                  user_id: receiver_id,
+                });
+
                 // Prepare notification message
                 notification = {
                   sender_id: senderId,
