@@ -2,6 +2,7 @@ import { db } from "../config/databaseConfig.js";
 import APIResponse from "../utils/APIResponse.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import { getCountForQuery } from "../utils/helper.js";
+import { uploadArrayOfImagesToCloudinary } from "../utils/uploadImageToClodinary.js";
 
 const getChatMessagesByChatId = async (req, res, next) => {
   const { chat_id, page = 1, limit = 25 } = req.query;
@@ -114,4 +115,19 @@ const getUserAllChats = async (req, res, next) => {
   }
 };
 
-export { getChatMessagesByChatId, getUserAllChats };
+const sendMediaInMessage = async (req, res, next) => {
+  try {
+    const files = req.files;
+    console.log(files, 120);
+    const result = await uploadArrayOfImagesToCloudinary({
+      files: files.audio,
+    });
+    console.log(result, 123);
+    return res.status(200).json({ message: "nice", result });
+  } catch (error) {
+    console.log(error, 125);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+export { getChatMessagesByChatId, getUserAllChats, sendMediaInMessage };
