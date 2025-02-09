@@ -1,4 +1,5 @@
 import { db } from "../config/databaseConfig.js";
+import SocketHandler from "../helpers/socketExport.js";
 import APIResponse from "../utils/APIResponse.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import { getCountForQuery } from "../utils/helper.js";
@@ -116,14 +117,78 @@ const getUserAllChats = async (req, res, next) => {
 };
 
 const sendMediaInMessage = async (req, res, next) => {
+  const userId = req.userId;
+  console.log(userId, 120);
   try {
+    const { chat_id, receiver_id } = req.body;
+    if (!chat_id) {
+      return next(new ErrorHandler("chat id is required", 400));
+    }
+    console.log(receiver_id, 127);
+
+    let message_type = "";
     const files = req.files;
-    console.log(files, 120);
-    const result = await uploadArrayOfImagesToCloudinary({
-      files: files.audio,
+    let message = "";
+
+    if (files.image && files.image.length > 0) {
+      message_type = "image";
+      message = await uploadArrayOfImagesToCloudinary({
+        files: files.image,
+      });
+    } else if (files.video && files.video.length > 0) {
+      message_type = "video";
+      message = await uploadArrayOfImagesToCloudinary({
+        files: files.video,
+      });
+    }
+
+    console.log(message, 123);
+
+    const addMedia = await db("messages").insert({
+      chat_id,
+      sender_id: userId,
+      message_type,
+      message: JSON.stringify(message[0]),
     });
-    console.log(result, 123);
-    return res.status(200).json({ message: "nice", result });
+
+    console.log(addMedia, 143);
+
+    if (addMedia.rowCount > 0) {
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "Media uploaded successfully",
+      });
+
+      // Use the singleton instance of SocketHandler
+      const socketHandler = SocketHandler;
+      console.log("SocketHandler instance:", SocketHandler);
+      console.log("SocketHandler socket:", SocketHandler.socket);
+      console.log(
+        "SocketHandler socketIOMapping:",
+        SocketHandler.socketIOMapping
+      );
+
+      // Check if the recipient is mapped
+      const recipientSocketId = SocketHandler.socketIOMapping.get(
+        parseInt(receiver_id)
+      );
+      console.log("Recipient Socket ID:", recipientSocketId);
+      // Send the message to the recipient using the sendToUser method
+      socketHandler.sendToUser(receiver_id, "message_event", {
+        message: message[0],
+        sender_id: userId,
+        receiver_id: receiver_id,
+        message_type: message_type,
+      });
+
+      return res.status(200).json(apiResponse);
+    } else {
+      const apiResponse = new APIResponse({
+        status_code: 400,
+        message: "Failed to upload media",
+      });
+      return res.status(400).json(apiResponse);
+    }
   } catch (error) {
     console.log(error, 125);
     return next(new ErrorHandler("Internal Server Error", 500));

@@ -230,7 +230,8 @@ class SocketHandler {
 
   // Emit an event/message to a specific user by user_id
   sendToUser(user_id, event, message) {
-    const socket_id = this.socketIOMapping.get(user_id);
+    console.log(user_id, event, message, 233);
+    const socket_id = this.socketIOMapping.get(parseInt(user_id));
     if (socket_id) {
       this.socket.to(socket_id).emit(event, message);
       console.log(`Sent message to user ${user_id} via socket ID ${socket_id}`);
@@ -244,6 +245,12 @@ class SocketHandler {
     this.socket.emit(event, message);
     console.log(`Broadcasting message: ${message}`);
   }
+  static getInstance() {
+    if (!SocketHandler.instance) {
+      SocketHandler.instance = new SocketHandler();
+    }
+    return SocketHandler.instance;
+  }
 }
 
-export default SocketHandler;
+export default SocketHandler.getInstance();
