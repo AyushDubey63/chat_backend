@@ -12,6 +12,7 @@ router.get("/get-chats", verifyToken, getChatMessagesByChatId);
 router.get("/get-all-chats", verifyToken, getUserAllChats);
 router.post(
   "/send-media",
+  verifyToken,
   multerUpload.fields([
     { name: "image", maxCount: 1 },
     { name: "video", maxCount: 5 },

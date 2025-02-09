@@ -23,8 +23,7 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-const socketHandler = new SocketHandler();
-socketHandler.setSocketInstance(io);
+SocketHandler.setSocketInstance(io);
 
 app.use(
   cors({
