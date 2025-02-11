@@ -184,6 +184,7 @@ const sendMediaInMessage = async (req, res, next) => {
       return res.status(200).json(apiResponse);
     } else {
       const apiResponse = new APIResponse({
+        status: "failure",
         status_code: 400,
         message: "Failed to upload media",
       });
