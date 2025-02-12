@@ -24,7 +24,7 @@ const io = new Server(server, {
       "http://localhost:5173",
       "http://192.168.1.177",
       "https://chat-frontend-qj4wreebs-ayush-dubeys-projects.vercel.app/",
-      "https://chat-frontend-beige-seven.vercel.app/",
+      "https://chat-frontend-beige-seven.vercel.app",
     ],
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
