@@ -2,6 +2,7 @@ import { db } from "../config/databaseConfig.js";
 import APIResponse from "../utils/APIResponse.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import { uploadArrayOfImagesToCloudinary } from "../utils/uploadImageToClodinary.js";
+import cron from "node-cron";
 
 const addUserStatus = async (req, res, next) => {
   const user_id = req.userId;
@@ -70,10 +71,16 @@ const getUserStatus = async (req, res, next) => {
       });
       return res.status(200).json(apiResponse);
     }
+    const finalData = status.map((data) => {
+      if (data.type === "image" || data.type === "video") {
+        data.data = JSON.parse(data.data);
+      }
+      return data;
+    });
     const apiResponse = new APIResponse({
       status_code: 200,
       message: "Status fetched successfully",
-      data: status,
+      data: finalData,
     });
     return res.status(200).json(apiResponse);
   } catch (error) {
@@ -100,13 +107,20 @@ const getUserChatsStatus = async (req, res, next) => {
       .select(
         "us.user_id",
         "u.user_name",
+        "u.profile_pic",
         db.raw(`jsonb_agg(
-           jsonb_build_object('data', us.data::jsonb, 'type', us.type)
+           jsonb_build_object(
+               'data', CASE 
+                          WHEN us.type = 'video' OR us.type = 'image' THEN us.data::jsonb
+                          ELSE to_jsonb(us.data::VARCHAR) 
+                       END,
+               'type', us.type
+           )
        ) AS status_data`)
       )
       .leftJoin("users as u", "us.user_id", "u.user_id")
       .whereIn("us.user_id", user_ids)
-      .groupBy("us.user_id", "u.user_name")
+      .groupBy("us.user_id", "u.user_name", "u.profile_pic")
       .debug(true);
     console.log(allChatStatus, 94);
     const apiResponse = new APIResponse({
@@ -120,5 +134,21 @@ const getUserChatsStatus = async (req, res, next) => {
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+cron.schedule("*/15 * * * *", async () => {
+  try {
+    console.log("Running expired status cleanup...");
+    const deletedCount = await db("user_status")
+      .whereRaw("expires_at < NOW()")
+      .del();
+
+    if (deletedCount > 0) {
+      console.log(`${deletedCount} expired status records deleted.`);
+    } else {
+      console.log("No expired status records found.");
+    }
+  } catch (error) {
+    console.error("Error during expired status cleanup:", error);
+  }
+});
 
 export { addUserStatus, getUserStatus, getUserChatsStatus };

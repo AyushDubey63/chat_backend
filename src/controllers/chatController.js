@@ -57,6 +57,11 @@ const getUserAllChats = async (req, res, next) => {
   const skip = parseInt((page - 1) * limit);
 
   try {
+    const user = await db("users")
+      .select("user_name", "email", "first_name", "last_name", "profile_pic")
+      .where("user_id", userId)
+      .first();
+    console.log(user, 61);
     console.time("user_chats");
 
     // Base query for fetching chats (without limit and offset)
@@ -97,6 +102,7 @@ const getUserAllChats = async (req, res, next) => {
 
     // Prepare the final response object
     const responseData = {
+      user: user,
       chats: result,
       total_chats: countResult ? countResult.total_chats : 0,
       total_pages: Math.ceil(countResult.total_chats / limit), // Calculate total pages based on total count and limit
