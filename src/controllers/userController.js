@@ -1,5 +1,5 @@
 import { ErrorHandler } from "../utils/errorHandler.js";
-import APIResponse from "../utils/APIResponse.js";
+import APIResponse from "../utils/apiResponse.js";
 import { db } from "../config/databaseConfig.js";
 
 const searchUsers = async (req, res, next) => {

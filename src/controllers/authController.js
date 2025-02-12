@@ -9,7 +9,7 @@ import { ErrorHandler } from "../utils/errorHandler.js";
 import { generateToken } from "../utils/auth.js";
 import { encryptData } from "../utils/serializeData.js";
 import { db } from "../config/databaseConfig.js";
-import APIResponse from "../utils/APIResponse.js";
+import APIResponse from "../utils/apiResponse.js";
 
 const registerUser = async (req, res, next) => {
   try {
