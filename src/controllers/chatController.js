@@ -2,7 +2,6 @@ import { db } from "../config/databaseConfig.js";
 import SocketHandler from "../helpers/socketExport.js";
 import APIResponse from "../utils/APIResponse.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
-import { getCountForQuery } from "../utils/helper.js";
 import { uploadArrayOfImagesToCloudinary } from "../utils/uploadImageToClodinary.js";
 
 const getChatMessagesByChatId = async (req, res, next) => {
