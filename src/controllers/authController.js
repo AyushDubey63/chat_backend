@@ -85,7 +85,8 @@ const loginUser = async (req, res, next) => {
     return res
       .cookie("token", encryptData(token), {
         httpOnly: true,
-        sameSite: false,
+        sameSite: "None",
+        secure: true,
       })
       .set("user_id", encryptData(String(user.user_id)))
       .status(200)
