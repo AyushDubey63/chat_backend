@@ -63,28 +63,57 @@ const getUserAllChats = async (req, res, next) => {
     console.log(user, 61);
     console.time("user_chats");
 
-    // Base query for fetching chats (without limit and offset)
-    const baseQuery = db("chat_participants as cp")
-      .innerJoin("chats as c", "cp.chat_id", "c.id")
-      .innerJoin("chat_participants as cp2", "c.id", "cp2.chat_id")
-      .leftJoin("users as u", "cp2.user_id", "u.user_id")
+    // Base query with DISTINCT ON logic
+    const baseQuery = db
+      .select(
+        db.raw(
+          `DISTINCT ON (c.id) 
+           c.id AS chat_id, 
+           c.type, 
+           COALESCE(gp.group_id, u.user_id) AS user_id, 
+           COALESCE(gp.group_name, u.user_name) AS user_name, 
+           COALESCE(gp.group_icon, u.profile_pic) AS profile_pic`
+        )
+      )
+      .from("chat_participants as cp")
+      .join("chats as c", "cp.chat_id", "c.id")
+      .join("chat_participants as cp2", "c.id", "cp2.chat_id")
+      .leftJoin("users as u", function () {
+        this.on("cp2.user_id", "u.user_id").andOnVal("c.type", "direct");
+      })
+      .leftJoin("groups as gp", function () {
+        this.on("c.id", "gp.chat_id").andOnVal("c.type", "group");
+      })
       .where("cp.user_id", userId)
-      .andWhere("cp2.user_id", "!=", userId);
+      .andWhere((builder) =>
+        builder.where("c.type", "group").orWhere("cp2.user_id", "!=", userId)
+      )
+      .orderBy("c.id")
+      .orderByRaw("u.user_id NULLS LAST");
 
-    // Clone the query for counting to avoid the side effects of limit and offset
-    const countQuery = baseQuery
-      .clone()
-      .count("cp.chat_id as total_chats")
+    // Count query (without limit and offset)
+    const countQuery = db("chat_participants as cp")
+      .join("chats as c", "cp.chat_id", "c.id")
+      .where("cp.user_id", userId)
+      .andWhere((builder) =>
+        builder.where("c.type", "group").orWhereExists(function () {
+          this.select("cp2.chat_id")
+            .from("chat_participants as cp2")
+            .whereRaw("cp2.chat_id = c.id")
+            .whereNot("cp2.user_id", userId);
+        })
+      )
+      .countDistinct("c.id as total_chats")
       .first();
 
-    // Get the chats data with limit and offset applied
+    // Get paginated results
     const result = await baseQuery
-      .distinct("c.id as chat_id", "u.user_id", "u.user_name", "u.profile_pic")
+      .clone()
       .limit(parseInt(limit))
       .offset(skip)
       .debug(true);
 
-    // Get the total count using the cloned query (without limit and offset)
+    // Get total chat count
     const countResult = await countQuery;
 
     console.timeEnd("user_chats");
@@ -99,12 +128,12 @@ const getUserAllChats = async (req, res, next) => {
       return res.status(200).json(apiResponse);
     }
 
-    // Prepare the final response object
+    // Prepare response data
     const responseData = {
       user: user,
       chats: result,
       total_chats: countResult ? countResult.total_chats : 0,
-      total_pages: Math.ceil(countResult.total_chats / limit), // Calculate total pages based on total count and limit
+      total_pages: Math.ceil(countResult.total_chats / limit),
       current_page: page,
     };
 
