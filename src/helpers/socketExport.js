@@ -45,9 +45,7 @@ class SocketHandler {
       socket.on("message_event", async ({ message, chat_data }) => {
         console.log("Message received:", message, chat_data);
 
-        // Make sure to use the correct `userId` that should be the sender's ID
-        // Assuming you have a userId available via some session or auth mechanism
-        const senderId = userid.userId; // Or directly use the variable where userId is stored
+        const senderId = userid.userId; // Ensure you have the correct user ID
 
         console.log("Sender User ID:", senderId);
 
@@ -56,33 +54,45 @@ class SocketHandler {
           const [new_message] = await db("messages")
             .insert({
               chat_id: chat_data.chat_id,
-              sender_id: senderId, // Sender is the authenticated user
+              sender_id: senderId,
               message,
             })
-            .returning("*"); // Returning the inserted message object
+            .returning("*");
 
           console.log("New message inserted with ID:", new_message.id);
 
-          // Assuming chat_data contains the recipient user ID to send the message to
-          const recipientSocketId = this.socketIOMapping.get(chat_data.user_id);
+          // Get all chat members' user_ids
+          const allChatMembers = await db("chat_participants")
+            .where({ chat_id: chat_data.chat_id })
+            .whereNot("user_id", senderId)
+            .select("user_id");
 
-          if (recipientSocketId) {
-            // Emit the message to the recipient's socket
-            socket.to(recipientSocketId).emit("message_event", {
-              message: new_message.message,
-              sender_id: senderId,
-              chat_id: chat_data.chat_id,
-            });
+          const recipientSocketIds = allChatMembers.map((member) =>
+            this.socketIOMapping.get(member.user_id)
+          );
+
+          if (recipientSocketIds.length > 0) {
+            // Use Promise.all to emit messages to all recipients concurrently
+            await Promise.all(
+              recipientSocketIds.map((id) => {
+                socket.to(id).emit("message_event", {
+                  message: new_message.message,
+                  sender_id: senderId,
+                  chat_id: chat_data.chat_id,
+                });
+              })
+            );
           } else {
             console.log(
-              "Recipient socket ID not found for user_id:",
-              chat_data.user_id
+              "Recipient socket IDs not found for chat_id:",
+              chat_data.chat_id
             );
           }
         } catch (error) {
-          console.error("Error handling send_message:", error);
+          console.error("Error while handling message_event:", error);
         }
       });
+
       socket.on("notification", async ({ receiver_id, type, message_data }) => {
         console.log(receiver_id, type, message_data, 87);
         try {

@@ -70,7 +70,7 @@ const getUserAllChats = async (req, res, next) => {
           `DISTINCT ON (c.id) 
            c.id AS chat_id, 
            c.type, 
-           COALESCE(gp.group_id, u.user_id) AS user_id, 
+           COALESCE(${userId}, u.user_id) AS user_id, 
            COALESCE(gp.group_name, u.user_name) AS user_name, 
            COALESCE(gp.group_icon, u.profile_pic) AS profile_pic`
         )
@@ -202,18 +202,30 @@ const sendMediaInMessage = async (req, res, next) => {
         SocketHandler.socketIOMapping
       );
 
-      // Check if the recipient is mapped
-      const recipientSocketId = SocketHandler.socketIOMapping.get(
-        parseInt(receiver_id)
-      );
-      console.log("Recipient Socket ID:", recipientSocketId);
-      // Send the message to the recipient using the sendToUser method
-      socketHandler.sendToUser(receiver_id, "message_event", {
-        message: message[0],
-        sender_id: userId,
-        receiver_id: receiver_id,
-        message_type: message_type,
-      });
+      const allChatMembers = await db("chat_participants")
+        .where({ chat_id: chat_id })
+        .whereNot("user_id", userId)
+        .select("user_id");
+
+      if (allChatMembers.length > 0) {
+        await Promise.all(
+          allChatMembers.map((member) =>
+            socketHandler.sendToUser(member.user_id, "message_event", {
+              message: message[0],
+              sender_id: userId,
+              receiver_id: member.user_id,
+              message_type: message_type,
+            })
+          )
+        );
+      }
+      // // Send the message to the recipient using the sendToUser method
+      // socketHandler.sendToUser(receiver_id, "message_event", {
+      //   message: message[0],
+      //   sender_id: userId,
+      //   receiver_id: receiver_id,
+      //   message_type: message_type,
+      // });
 
       return res.status(200).json(apiResponse);
     } else {
