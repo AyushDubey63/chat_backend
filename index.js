@@ -39,6 +39,7 @@ app.use(
       "http://192.168.1.177",
       "https://chat-frontend-beige-seven.vercel.app",
       "https://chat-frontend-qj4wreebs-ayush-dubeys-projects.vercel.app/",
+      "http://49.36.115.180",
     ],
     credentials: true,
     exposedHeaders: ["user_id"],
