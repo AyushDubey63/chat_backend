@@ -1,6 +1,7 @@
 import { ErrorHandler } from "../utils/errorHandler.js";
 import APIResponse from "../utils/apiResponse.js";
 import { db } from "../config/databaseConfig.js";
+import { uploadArrayOfImagesToCloudinary } from "../utils/uploadImageToClodinary.js";
 
 const searchUsers = async (req, res, next) => {
   const { search } = req.query;
@@ -91,14 +92,12 @@ const getUserDetails = async (req, res, next) => {
   try {
     const details = await db("users as u")
       .select(
-        "u.user_id",
         "u.user_name",
         "u.profile_pic",
         "u.email",
         "u.first_name",
         "u.last_name",
-        "u.phone_number",
-        "u.created_at"
+        "u.bio"
       )
       .where("u.user_id", userId)
       .first();
@@ -118,4 +117,45 @@ const getUserDetails = async (req, res, next) => {
   }
 };
 
-export { getUserDetails, searchUsers };
+const updateUser = async (req, res, next) => {
+  console.log("hello", 121);
+  const userId = req.userId;
+  const { first_name, last_name, bio } = req.body;
+  const files = req.files;
+  try {
+    const updateData = {
+      first_name,
+      last_name,
+      bio,
+    };
+    console.log(files, 131);
+    if (files && files.length > 0) {
+      let imageUrl = await uploadArrayOfImagesToCloudinary({
+        files: files,
+      });
+      updateData.profile_pic = JSON.stringify(imageUrl[0]);
+    }
+    console.log(updateData, 138);
+    // return res.status(200).json(req.body);
+    const updatedData = await db("users")
+      .where("user_id", userId)
+      .update(updateData)
+      .debug(true);
+    console.log(updatedData, 144);
+    if (!updatedData) {
+      console.log(updatedData, 147);
+      return next(new ErrorHandler("Failed to update user", 400));
+    }
+    const apiResponse = new APIResponse({
+      status: "success",
+      status_code: 200,
+      message: "User updated successfully",
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error, 154);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+export { getUserDetails, searchUsers, updateUser };
