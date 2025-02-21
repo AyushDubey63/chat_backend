@@ -116,6 +116,35 @@ const getUserDetails = async (req, res, next) => {
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+const getUserDetailsById = async (req, res, next) => {
+  const { user_id } = req.query;
+  try {
+    const details = await db("users as u")
+      .select(
+        "u.user_name",
+        "u.profile_pic",
+        "u.email",
+        "u.first_name",
+        "u.last_name",
+        "u.bio"
+      )
+      .where("u.user_id", user_id)
+      .first();
+    if (!details) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+    const apiResponse = new APIResponse({
+      status: "success",
+      status_code: 200,
+      message: "User details fetched successfully",
+      data: details,
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
 
 const updateUser = async (req, res, next) => {
   console.log("hello", 121);
@@ -158,4 +187,4 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-export { getUserDetails, searchUsers, updateUser };
+export { getUserDetails, searchUsers, updateUser, getUserDetailsById };

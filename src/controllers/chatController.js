@@ -72,7 +72,9 @@ const getUserAllChats = async (req, res, next) => {
            c.type, 
            COALESCE(${userId}, u.user_id) AS user_id, 
            COALESCE(gp.group_name, u.user_name) AS user_name, 
-           COALESCE(gp.group_icon, u.profile_pic) AS profile_pic`
+           COALESCE(gp.group_icon, u.profile_pic) AS profile_pic,
+           COALESCE(gp.group_id,u.user_id) as u_id
+           `
         )
       )
       .from("chat_participants as cp")
@@ -242,4 +244,139 @@ const sendMediaInMessage = async (req, res, next) => {
   }
 };
 
-export { getChatMessagesByChatId, getUserAllChats, sendMediaInMessage };
+const createGroupChat = async (req, res, next) => {
+  const userId = req.userId;
+  const { group_name, description, members } = req.body;
+
+  if (!group_name || !members) {
+    return next(new ErrorHandler("Group name and members are required", 400));
+  }
+
+  try {
+    const newGroup = {
+      group_name: group_name,
+      created_by: userId,
+      admin_id: userId,
+    };
+    if (description) {
+      newGroup.description = description;
+    }
+
+    const files = req.files;
+    console.log(files, 270);
+    if (files && files.length > 0) {
+      const groupIcon = await uploadArrayOfImagesToCloudinary({
+        files: files,
+      });
+      newGroup.group_icon = JSON.stringify(groupIcon[0]);
+    }
+    console.log(newGroup, 270);
+    JSON.parse(members).map((elem) => {
+      console.log(elem);
+    });
+    // return res.status(200).json(req.body);
+    const createGroup = await db.transaction(async (trx) => {
+      const createChat = await trx("chats")
+        .insert({ type: "group" })
+        .returning("id");
+
+      const chatId = createChat[0].id;
+      newGroup.chat_id = chatId;
+
+      await trx("groups").insert(newGroup);
+
+      const chatParticipants = JSON.parse(members).map((member) => ({
+        chat_id: chatId,
+        user_id: member,
+      }));
+      await trx("chat_participants").insert(chatParticipants);
+    });
+
+    const apiResponse = new APIResponse({
+      status_code: 201,
+      status: "success",
+      message: "Group created successfully",
+    });
+    return res.status(201).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+const getGroupDetails = async (req, res, next) => {
+  // const userId = req.userId;
+  const { group_id } = req.query;
+  if (!group_id) {
+    return next(new ErrorHandler("Group id is required", 400));
+  }
+  try {
+    const groupDetails = await db("groups as g")
+      .select(
+        "g.group_name",
+        "g.group_icon",
+        "g.description",
+        "g.created_at",
+        "u.user_name as admin_name"
+      )
+      .leftJoin("users as u", "g.admin_id", "u.user_id")
+      .where("g.group_id", group_id);
+    if (groupDetails.length === 0) {
+      return next(new ErrorHandler("Group not found", 404));
+    }
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      status: "success",
+      message: "Group details fetched successfully",
+      data: groupDetails[0],
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+const getGroupParticipants = async (req, res, next) => {
+  const { chat_id } = req.query;
+  if (!chat_id) {
+    return next(new ErrorHandler("Chat id is required", 400));
+  }
+  try {
+    const groupParticipants = await db("groups as g")
+      .select("u.user_id", "u.user_name", "u.profile_pic")
+      .leftJoin("chat_participants as cp", "g.chat_id", "cp.chat_id")
+      .leftJoin("users as u", "cp.user_id", "u.user_id")
+      .where("g.chat_id", chat_id)
+      .whereRaw("u.user_id != g.admin_id")
+      .orderBy("cp.joined_at")
+      .debug(true);
+
+    if (groupParticipants.length === 0) {
+      const apiResponse = new APIResponse({
+        status_code: 200,
+        message: "No participants found",
+        data: { participants: [] },
+      });
+      return res.status(200).json(apiResponse);
+    }
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "Participants fetched successfully",
+      data: { participants: groupParticipants },
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+export {
+  getChatMessagesByChatId,
+  getUserAllChats,
+  sendMediaInMessage,
+  createGroupChat,
+  getGroupDetails,
+  getGroupParticipants,
+};

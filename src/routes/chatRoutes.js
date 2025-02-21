@@ -1,6 +1,9 @@
 import { Router } from "express";
 import {
+  createGroupChat,
   getChatMessagesByChatId,
+  getGroupDetails,
+  getGroupParticipants,
   getUserAllChats,
   sendMediaInMessage,
 } from "../controllers/chatController.js";
@@ -20,4 +23,13 @@ router.post(
   ]),
   sendMediaInMessage
 );
+router.post(
+  "/create-group-chat",
+  multerUpload.array("group_icon", 1),
+  verifyToken,
+  createGroupChat
+);
+
+router.get("/group-details", verifyToken, getGroupDetails);
+router.get("/group-participants", verifyToken, getGroupParticipants);
 export default router;
