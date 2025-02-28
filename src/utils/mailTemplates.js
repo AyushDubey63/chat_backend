@@ -1,4 +1,4 @@
-export const verifyAccount = ({ email, token }) => {
+export const verifyAccount = ({ email, token, user_name }) => {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,7 +104,7 @@ export const verifyAccount = ({ email, token }) => {
     <div class="header">
         <h2>Account Verification</h2>
     </div>
-    <p>Hello [User's Name],</p>
+    <p>Hello ${user_name},</p>
     <p>Thank you for signing up with us!</p>
     <p>To complete your registration and verify your account, please use the following One-Time Password (OTP):</p>
     

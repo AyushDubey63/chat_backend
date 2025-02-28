@@ -77,7 +77,8 @@ const loginUser = async (req, res, next) => {
         "password",
         "first_name",
         "last_name",
-        "profile_pic"
+        "profile_pic",
+        "is_verified"
       )
       .where({ email })
       .first();
@@ -85,7 +86,9 @@ const loginUser = async (req, res, next) => {
     if (!user) {
       return next(new ErrorHandler("Invalid Credentials", 401));
     }
-
+    if (user.is_verified === false) {
+      return next(new ErrorHandler("User not verified", 401));
+    }
     console.log(user, 44);
 
     // Compare the password
