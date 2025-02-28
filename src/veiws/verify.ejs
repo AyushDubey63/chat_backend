@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Your Account</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+
+      .container {
+        max-width: 500px;
+        margin: 50px auto;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid #007bff;
+      }
+
+      .header {
+        text-align: center;
+        padding-bottom: 20px;
+      }
+
+      h2 {
+        font-size: 28px;
+        color: #333;
+        margin: 0;
+        font-weight: bold;
+      }
+
+      p {
+        font-size: 16px;
+        line-height: 1.5;
+        margin: 10px 0;
+      }
+
+      .input-group {
+        margin: 15px 0;
+        font-size: 16px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-top: 5px;
+      }
+
+      .button {
+        display: inline-block;
+        width: 100%;
+        padding: 14px;
+        background-color: #007bff;
+        color: white;
+        font-size: 16px;
+        text-decoration: none;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .button:hover {
+        background-color: #0056b3;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .footer {
+        text-align: center;
+        font-size: 12px;
+        color: #777;
+        margin-top: 30px;
+      }
+
+      .footer p {
+        margin: 5px 0;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          padding: 20px;
+        }
+
+        .button {
+          padding: 12px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Verify Your Account</h2>
+      </div>
+      <p>
+        To complete your account verification, please provide your email address
+        and the One-Time Password (OTP) you received:
+      </p>
+
+      <form id="verificationForm" action="/verify" method="POST">
+        <!-- Email input (pre-filled with the email passed via params) -->
+        <div class="input-group">
+          <label for="email">Email Address</label>
+          <input
+            value="<%= email %>"
+            disabled
+            type="email"
+            id="email"
+            name="email"
+            required
+            placeholder="Enter your email address"
+          />
+        </div>
+
+        <!-- OTP input -->
+        <div class="input-group">
+          <label for="otp">OTP</label>
+          <input
+            type="text"
+            id="otp"
+            name="otp"
+            required
+            placeholder="Enter your OTP"
+          />
+        </div>
+
+        <!-- Hidden JWT token input -->
+        <input type="hidden" id="token" name="token" value="<%= jwtToken %>" />
+
+        <!-- Submit button -->
+        <button type="submit" class="button">Verify Now</button>
+      </form>
+
+      <div class="footer">
+        <p>
+          If you did not receive the OTP, <a href="#">request a new one</a>.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("verificationForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Prevent the form from submitting normally
+
+          const email = document.getElementById("email").value;
+          const otp = document.getElementById("otp").value;
+          const token = document.getElementById("token").value;
+
+          // Prepare data for API request
+          const data = {
+            email: email,
+            otp: otp,
+          };
+
+          // Make the API call using Fetch API
+          fetch(`http://localhost:3001/api/v1/auth/verify/${token}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // Handle the response (e.g., success or error message)
+              if (data.success) {
+                alert("Verification successful!");
+              } else {
+                alert("Verification failed. Please check your OTP.");
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while verifying your account.");
+            });
+        });
+    </script>
+  </body>
+</html>

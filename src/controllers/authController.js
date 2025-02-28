@@ -10,6 +10,10 @@ import { generateToken } from "../utils/auth.js";
 import { encryptData } from "../utils/serializeData.js";
 import { db } from "../config/databaseConfig.js";
 import APIResponse from "../utils/apiResponse.js";
+import sendMail from "../utils/sendMail.js";
+import jwt from "jsonwebtoken";
+import ejs from "ejs";
+import { verifyAccount } from "../utils/mailTemplates.js";
 
 const registerUser = async (req, res, next) => {
   try {
@@ -24,8 +28,24 @@ const registerUser = async (req, res, next) => {
         password: userData.password,
       })
       .returning("*"); // This will return the inserted user details
-
-    console.log(insertedUser, 23);
+    console.log(insertedUser, 24);
+    if (insertedUser) {
+      const otp = Math.floor(1000 + Math.random() * 9000);
+      console.log(otp, 34);
+      const token = jwt.sign(
+        { email: userData.email, otp },
+        process.env.JWT_SECRET,
+        { expiresIn: "10m" }
+      );
+      console.log(token, 40);
+      const email = await sendMail({
+        to: userData.email,
+        subject: "Account Verification",
+        text: `Hello ${userData.user_name},Thank you for signing up with us!To complete your registration and verify your account`,
+        html: verifyAccount({ email: userData.email, token }),
+      });
+      console.log(email, 35);
+    }
 
     const apiResponse = new APIResponse({
       status_code: 201,
@@ -127,4 +147,52 @@ const authenicateUser = async (req, res) => {
   });
   return res.status(200).json(apiResponse);
 };
-export { registerUser, authenicateUser, loginUser, logoutUser };
+
+const sendVerifyPage = async (req, res, next) => {
+  const { email, token } = req.params;
+
+  if (!email || !token) {
+    return next(new ErrorHandler("Invalid Request", 400));
+  }
+
+  try {
+    ejs.renderFile("src/views/verify.ejs", { email, token }, (err, data) => {
+      if (err) {
+        return next(new ErrorHandler("Error rendering verification page", 500));
+      }
+      return res.sendFile(data);
+    });
+  } catch (error) {
+    return next(new ErrorHandler("Something went wrong", 500));
+  }
+};
+
+const verifyOtp = async (req, res, next) => {
+  const { token } = req.params;
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return next(new ErrorHandler("Invalid Request", 400));
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.otp !== otp) {
+      return next(new ErrorHandler("Invalid OTP", 401));
+    }
+    const [updatedUser] = await db("users")
+      .where({ email })
+      .update({ is_verified: true });
+    console.log(updatedUser, 182);
+    return res.redirect("http://localhost:5173/login");
+  } catch (error) {
+    console.log(error, 185);
+    return next(new ErrorHandler("Invalid Token", 401));
+  }
+};
+export {
+  registerUser,
+  authenicateUser,
+  loginUser,
+  logoutUser,
+  sendVerifyPage,
+  verifyOtp,
+};
