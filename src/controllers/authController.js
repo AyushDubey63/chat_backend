@@ -1,4 +1,6 @@
 import { ZodError } from "zod";
+import path from "path";
+import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 import {
   userLoginSchema,
@@ -42,7 +44,11 @@ const registerUser = async (req, res, next) => {
         to: userData.email,
         subject: "Account Verification",
         text: `Hello ${userData.user_name},Thank you for signing up with us!To complete your registration and verify your account`,
-        html: verifyAccount({ email: userData.email, token }),
+        html: verifyAccount({
+          email: userData.email,
+          token,
+          user_name: userData.user_name,
+        }),
       });
       console.log(email, 35);
     }
@@ -152,20 +158,31 @@ const authenicateUser = async (req, res) => {
 };
 
 const sendVerifyPage = async (req, res, next) => {
-  const { email, token } = req.params;
-
+  const { email, token, user_name } = req.params;
+  console.log(email, token, user_name, 160);
   if (!email || !token) {
     return next(new ErrorHandler("Invalid Request", 400));
   }
 
   try {
-    ejs.renderFile("src/views/verify.ejs", { email, token }, (err, data) => {
-      if (err) {
-        return next(new ErrorHandler("Error rendering verification page", 500));
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    console.log(__dirname, 169);
+    ejs.renderFile(
+      path.join(__dirname, "../views/verify.ejs"),
+      { email, token, user_name },
+      (err, data) => {
+        console.log(err, 170);
+        if (err) {
+          return next(
+            new ErrorHandler("Error rendering verification page", 500)
+          );
+        }
+        return res.send(data);
       }
-      return res.sendFile(data);
-    });
+    );
   } catch (error) {
+    console.log(error, 179);
     return next(new ErrorHandler("Something went wrong", 500));
   }
 };
@@ -173,6 +190,7 @@ const sendVerifyPage = async (req, res, next) => {
 const verifyOtp = async (req, res, next) => {
   const { token } = req.params;
   const { email, otp } = req.body;
+  console.log(email, otp, token, 177);
   if (!email || !otp) {
     return next(new ErrorHandler("Invalid Request", 400));
   }
@@ -187,8 +205,40 @@ const verifyOtp = async (req, res, next) => {
     console.log(updatedUser, 182);
     return res.redirect("http://localhost:5173/login");
   } catch (error) {
-    console.log(error, 185);
+    // console.log(error.message, 185);
+    if (error.message === "jwt expired") {
+      return next(new ErrorHandler("OTP expired", 401));
+    }
     return next(new ErrorHandler("Invalid Token", 401));
+  }
+};
+
+const resendOtp = async (req, res, next) => {
+  const { email, user_name } = req.params;
+  console.log(email, user_name, 218);
+  try {
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    const token = jwt.sign({ email, otp }, process.env.JWT_SECRET, {
+      expiresIn: "10m",
+    });
+    const email = await sendMail({
+      to: userData.email,
+      subject: "Account Verification",
+      text: `Hello ${userData.user_name},Thank you for signing up with us!To complete your registration and verify your account`,
+      html: verifyAccount({
+        email: email,
+        token,
+        user_name: user_name,
+      }),
+    });
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "OTP sent successfully",
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error, 24);
+    return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
 export {
@@ -198,4 +248,5 @@ export {
   logoutUser,
   sendVerifyPage,
   verifyOtp,
+  resendOtp,
 };

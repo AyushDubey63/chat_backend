@@ -4,6 +4,7 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  resendOtp,
   sendVerifyPage,
   verifyOtp,
 } from "../controllers/authController.js";
@@ -15,6 +16,7 @@ router.post("/authenticate", verifyToken, authenicateUser);
 router.post("/register-user", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", verifyToken, logoutUser);
-router.get("/verify-user/:email/:token", sendVerifyPage);
+router.get("/verify-user/:email/:token/:user_name", sendVerifyPage);
 router.post("/verify-otp/:token", verifyOtp);
+router.post("/resend-otp/:email/:user_name", resendOtp);
 export default router;

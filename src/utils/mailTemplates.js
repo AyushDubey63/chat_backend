@@ -116,7 +116,7 @@ export const verifyAccount = ({ email, token, user_name }) => {
 
     <p>Alternatively, you can verify your email address by clicking the button below:</p>
     
-    <a href="http://localhost:3001/api/v1/auth/verify-user/${email}/${token}" class="button">Click Here to Verify</a>
+    <a href="http://localhost:3001/api/v1/auth/verify-user/${email}/${token}/${user_name}" class="button">Click Here to Verify</a>
 
     
 </div>

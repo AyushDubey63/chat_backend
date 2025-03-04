@@ -142,15 +142,24 @@
         </div>
 
         <!-- Hidden JWT token input -->
-        <input type="hidden" id="token" name="token" value="<%= jwtToken %>" />
-
+        <input type="hidden" id="token" name="token" value="<%= token %>" />
+        <input
+          type="hidden"
+          id="user_name"
+          name="user_name"
+          value="<%= user_name %>"
+        />
         <!-- Submit button -->
         <button type="submit" class="button">Verify Now</button>
       </form>
 
       <div class="footer">
         <p>
-          If you did not receive the OTP, <a href="#">request a new one</a>.
+          If you did not receive the OTP,
+          <a
+            href="http://localhost:3001/api/v1/auth/resend-otp/<%= email %>/<%= user_name %>"
+            >request a new one</a
+          >.
         </p>
       </div>
     </div>
@@ -172,7 +181,7 @@
           };
 
           // Make the API call using Fetch API
-          fetch(`http://localhost:3001/api/v1/auth/verify/${token}`, {
+          fetch(`http://localhost:3001/api/v1/auth/verify-otp/${token}`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -182,14 +191,22 @@
             .then((response) => response.json())
             .then((data) => {
               // Handle the response (e.g., success or error message)
+              console.log("Response:", data.message, 196);
               if (data.success) {
                 alert("Verification successful!");
               } else {
-                alert("Verification failed. Please check your OTP.");
+                if (data.message === "OTP expired") {
+                  alert(
+                    "OTP expired. Request a new OTP via email and close this window."
+                  );
+                } else {
+                  // console.log("Error:", data, 197);
+                  alert("Verification failed. Please check your OTP.");
+                }
               }
             })
             .catch((error) => {
-              console.error("Error:", error);
+              console.log("Error:", error, 201);
               alert("An error occurred while verifying your account.");
             });
         });
