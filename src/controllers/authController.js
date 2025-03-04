@@ -244,6 +244,51 @@ const resendOtp = async (req, res, next) => {
     return next(new ErrorHandler("Internal Server Error", 500));
   }
 };
+
+const forgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+  try {
+    const user = await db("users").where({ email }).first();
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "10m",
+    });
+  } catch (error) {
+    console.log(error, 253);
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+const sendResetPasswordPage = async (req, res, next) => {
+  const { email, token } = req.params;
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    ejs.renderFile(
+      path.join(__dirname, "../views/resetPassword.ejs"),
+      { email, token },
+      (err, data) => {
+        if (err) {
+          return next(
+            new ErrorHandler("Error rendering reset password page", 500)
+          );
+        }
+        return res.send(data);
+      }
+    );
+  } catch (error) {
+    console.log(error, 179);
+    return next(new ErrorHandler("Something went wrong", 500));
+  }
+};
+
+const verifyAndResetPassword = async (req, res, next) => {
+  const { email, password } = req.body;
+  try {
+  } catch (error) {}
+};
 export {
   registerUser,
   authenicateUser,
@@ -252,4 +297,7 @@ export {
   sendVerifyPage,
   verifyOtp,
   resendOtp,
+  forgotPassword,
+  sendResetPasswordPage,
+  verifyAndResetPassword,
 };

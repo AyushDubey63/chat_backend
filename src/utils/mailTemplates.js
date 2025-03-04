@@ -169,4 +169,72 @@ const otpSentSuccessfully = () => `<!DOCTYPE html>
 </body>
 </html>
 `;
-export { verifyAccount, otpSentSuccessfully };
+const resetPassword = ({ email, token }) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #555;
+            text-align: center;
+        }
+        .link-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .reset-link {
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .reset-link:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Password Reset Request</h2>
+        <p>We received a request to reset your password. To proceed with the password reset, please click the link below:</p>
+        <div class="link-container">
+            <a href="${process.env.SERVER_URL}/api/v1/auth/reset-password/${email}/${token}" class="reset-link">Click here to reset your password</a>
+        </div>
+        <p>If you did not request a password reset, please ignore this email.</p>
+        <div class="footer">
+            <p>&copy; 2025 Your Company. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+export { verifyAccount, otpSentSuccessfully, resetPassword };
