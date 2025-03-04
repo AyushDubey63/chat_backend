@@ -1,4 +1,4 @@
-export const verifyAccount = ({ email, token, user_name }) => {
+const verifyAccount = ({ email, token, user_name, otp }) => {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -109,14 +109,14 @@ export const verifyAccount = ({ email, token, user_name }) => {
     <p>To complete your registration and verify your account, please use the following One-Time Password (OTP):</p>
     
     <div class="otp">
-        9999
+        ${otp}
     </div>
     
     <p>For your security, this OTP is valid for the next 10 minutes. If you did not request this OTP, please ignore this email.</p>
 
     <p>Alternatively, you can verify your email address by clicking the button below:</p>
     
-    <a href="http://localhost:3001/api/v1/auth/verify-user/${email}/${token}/${user_name}" class="button">Click Here to Verify</a>
+    <a href="${process.env.SERVER_URL}/api/v1/auth/verify-user/${email}/${token}/${user_name}" class="button">Click Here to Verify</a>
 
     
 </div>
@@ -125,3 +125,48 @@ export const verifyAccount = ({ email, token, user_name }) => {
 </html>
 `;
 };
+const otpSentSuccessfully = () => `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #555;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>OTP Verification</h2>
+        <p>An OTP has been sent to your email address. Please check your email and verify your account by entering the OTP.</p>
+        <p>If you didn’t receive the email, kindly check your spam folder.</p>
+        
+    </div>
+</body>
+</html>
+`;
+export { verifyAccount, otpSentSuccessfully };

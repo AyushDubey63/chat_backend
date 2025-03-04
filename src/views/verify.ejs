@@ -157,7 +157,7 @@
         <p>
           If you did not receive the OTP,
           <a
-            href="http://localhost:3001/api/v1/auth/resend-otp/<%= email %>/<%= user_name %>"
+            href="<%= process.env.SERVER_URL %>/api/v1/auth/resend-otp/<%= email %>/<%= user_name %>"
             >request a new one</a
           >.
         </p>
@@ -181,19 +181,23 @@
           };
 
           // Make the API call using Fetch API
-          fetch(`http://localhost:3001/api/v1/auth/verify-otp/${token}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          })
+          fetch(
+            `<%= process.env.SERVER_URL %>/api/v1/auth/verify-otp/${token}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            }
+          )
             .then((response) => response.json())
             .then((data) => {
               // Handle the response (e.g., success or error message)
-              console.log("Response:", data.message, 196);
-              if (data.success) {
+              console.log("Response:", data, 196);
+              if (data.status === "success") {
                 alert("Verification successful!");
+                window.location.href = "<%= process.env.CLIENT_URL %>";
               } else {
                 if (data.message === "OTP expired") {
                   alert(

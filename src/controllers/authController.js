@@ -15,7 +15,7 @@ import APIResponse from "../utils/apiResponse.js";
 import sendMail from "../utils/sendMail.js";
 import jwt from "jsonwebtoken";
 import ejs from "ejs";
-import { verifyAccount } from "../utils/mailTemplates.js";
+import { otpSentSuccessfully, verifyAccount } from "../utils/mailTemplates.js";
 
 const registerUser = async (req, res, next) => {
   try {
@@ -48,6 +48,7 @@ const registerUser = async (req, res, next) => {
           email: userData.email,
           token,
           user_name: userData.user_name,
+          otp,
         }),
       });
       console.log(email, 35);
@@ -196,16 +197,20 @@ const verifyOtp = async (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.otp !== otp) {
+    console.log(decoded, 200);
+    console.log(parseInt(otp) !== decoded.otp, 202);
+    if (decoded.otp !== parseInt(otp)) {
       return next(new ErrorHandler("Invalid OTP", 401));
     }
-    const [updatedUser] = await db("users")
-      .where({ email })
-      .update({ is_verified: true });
-    console.log(updatedUser, 182);
-    return res.redirect("http://localhost:5173/login");
+    await db("users").where({ email }).update({ is_verified: true });
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "User verified successfully",
+      status: "success",
+    });
+    return res.status(200).json(apiResponse);
   } catch (error) {
-    // console.log(error.message, 185);
+    console.log(error, 185);
     if (error.message === "jwt expired") {
       return next(new ErrorHandler("OTP expired", 401));
     }
@@ -221,21 +226,19 @@ const resendOtp = async (req, res, next) => {
     const token = jwt.sign({ email, otp }, process.env.JWT_SECRET, {
       expiresIn: "10m",
     });
-    const email = await sendMail({
-      to: userData.email,
+    const sentEmail = await sendMail({
+      to: email,
       subject: "Account Verification",
-      text: `Hello ${userData.user_name},Thank you for signing up with us!To complete your registration and verify your account`,
+      text: `Hello ${user_name},Thank you for signing up with us!To complete your registration and verify your account`,
       html: verifyAccount({
         email: email,
         token,
         user_name: user_name,
+        otp,
       }),
     });
-    const apiResponse = new APIResponse({
-      status_code: 200,
-      message: "OTP sent successfully",
-    });
-    return res.status(200).json(apiResponse);
+    console.log(sentEmail, 229);
+    return res.send(otpSentSuccessfully());
   } catch (error) {
     console.log(error, 24);
     return next(new ErrorHandler("Internal Server Error", 500));

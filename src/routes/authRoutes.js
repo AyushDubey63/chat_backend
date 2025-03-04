@@ -18,5 +18,5 @@ router.post("/login", loginUser);
 router.post("/logout", verifyToken, logoutUser);
 router.get("/verify-user/:email/:token/:user_name", sendVerifyPage);
 router.post("/verify-otp/:token", verifyOtp);
-router.post("/resend-otp/:email/:user_name", resendOtp);
+router.get("/resend-otp/:email/:user_name", resendOtp);
 export default router;

@@ -20,12 +20,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://192.168.1.177",
-      "https://chat-frontend-qj4wreebs-ayush-dubeys-projects.vercel.app/",
-      "https://chat-frontend-beige-seven.vercel.app",
-    ],
+    origin: ["http://localhost:5173", process.env.CLIENT_URL],
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
   },
@@ -34,13 +29,7 @@ SocketHandler.setSocketInstance(io);
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://192.168.1.177",
-      "https://chat-frontend-beige-seven.vercel.app",
-      "https://chat-frontend-qj4wreebs-ayush-dubeys-projects.vercel.app/",
-      "http://49.36.115.180",
-    ],
+    origin: ["http://localhost:5173", process.env.CLIENT_URL],
     credentials: true,
     exposedHeaders: ["user_id"],
     methods: ["GET", "POST", "PATCH", "DELETE"],
