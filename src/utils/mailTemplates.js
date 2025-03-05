@@ -169,7 +169,8 @@ const otpSentSuccessfully = () => `<!DOCTYPE html>
 </body>
 </html>
 `;
-const resetPassword = ({ email, token }) => `
+console.log(process.env.SERVER_URL, 172);
+const resetPassword = ({ email, user_name, token }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -177,64 +178,200 @@ const resetPassword = ({ email, token }) => `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Password Reset</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
+        /* Reset styles */
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
-        .container {
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f7fa;
+            padding: 20px;
+            text-align: left;
+        }
+        .email-content {
             width: 100%;
             max-width: 600px;
-            margin: 50px auto;
             background-color: #ffffff;
-            padding: 20px;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
         }
         h2 {
+            font-size: 28px;
+            color: #4a90e2;
+            margin-bottom: 30px;
             text-align: center;
-            color: #333;
         }
         p {
             font-size: 16px;
-            line-height: 1.5;
             color: #555;
-            text-align: center;
+            margin-bottom: 20px;
         }
-        .link-container {
-            text-align: center;
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .button-container {
+            text-align: center; /* Center the button */
             margin-top: 20px;
         }
-        .reset-link {
-            color: #007BFF;
-            text-decoration: none;
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #4a90e2;
+            color: white;
+            font-size: 16px;
             font-weight: bold;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
         }
-        .reset-link:hover {
-            text-decoration: underline;
+        .button:hover {
+            background-color: #357ab7;
         }
         .footer {
-            text-align: center;
             font-size: 12px;
             color: #aaa;
-            margin-top: 20px;
+            margin-top: 30px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .divider {
+            margin: 30px 0;
+            height: 1px;
+            background-color: #e0e0e0;
+            border: none;
+        }
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            .email-content {
+                padding: 20px;
+            }
+            h2 {
+                font-size: 24px;
+            }
+            .button {
+                width: 100%;
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Password Reset Request</h2>
-        <p>We received a request to reset your password. To proceed with the password reset, please click the link below:</p>
-        <div class="link-container">
-            <a href="${process.env.SERVER_URL}/api/v1/auth/reset-password/${email}/${token}" class="reset-link">Click here to reset your password</a>
+    <div class="email-wrapper">
+        <div class="email-content">
+            <h2>Password Reset Request</h2>
+            <p class="greeting">Hello ${user_name},</p>
+            <p>We received a request to reset your password. To proceed with the password reset, please click the button below:</p>
+            
+            <div class="button-container">
+                <a href="${process.env.SERVER_URL}/api/v1/auth/reset-password/${email}/${token}" class="button">Reset Password</a>
+            </div>
+            
+            <p style="font-size: 14px; color: #f44336; text-align: center; margin-top: 10px;">Due to security reasons this link is only valid for 5 minutes.</p>
+            
+            <div class="divider"></div>
+            
+            <p>If you did not request a password reset, please ignore this email.</p>
+            
         </div>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        <div class="footer">
-            <p>&copy; 2025 Your Company. All rights reserved.</p>
+    </div>
+</body>
+</html>
+
+
+`;
+const linkExpiredTemplate = () => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset Link Expired</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f7fa;
+            padding: 20px;
+            text-align: center;
+        }
+        .email-content {
+            width: 100%;
+            max-width: 600px;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+        }
+        h2 {
+            font-size: 24px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #4a90e2;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .button:hover {
+            background-color: #357ab7;
+        }  margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-content">
+            <h2>Password Reset Link Expired</h2>
+            <p>The link you clicked to reset your password has expired. Please request a new one below.</p>
+            
+            <a href="${process.env.CLIENT_URL}/forgot-password" class="button">Request New Link</a>
+            
+            
         </div>
     </div>
 </body>
 </html>
 `;
-export { verifyAccount, otpSentSuccessfully, resetPassword };
+export {
+  verifyAccount,
+  otpSentSuccessfully,
+  resetPassword,
+  linkExpiredTemplate,
+};

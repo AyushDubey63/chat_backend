@@ -22,7 +22,7 @@ router.post("/logout", verifyToken, logoutUser);
 router.get("/verify-user/:email/:token/:user_name", sendVerifyPage);
 router.post("/forgot-password", forgotPassword);
 router.get("/reset-password/:email/:token", sendResetPasswordPage);
-router.get("/verify-and-reset-password/:token", verifyAndResetPassword);
+router.post("/verify-and-reset-password/:token", verifyAndResetPassword);
 router.post("/verify-otp/:token", verifyOtp);
 router.get("/resend-otp/:email/:user_name", resendOtp);
 export default router;

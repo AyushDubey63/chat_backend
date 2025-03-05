@@ -15,7 +15,12 @@ import APIResponse from "../utils/apiResponse.js";
 import sendMail from "../utils/sendMail.js";
 import jwt from "jsonwebtoken";
 import ejs from "ejs";
-import { otpSentSuccessfully, verifyAccount } from "../utils/mailTemplates.js";
+import {
+  linkExpiredTemplate,
+  otpSentSuccessfully,
+  resetPassword,
+  verifyAccount,
+} from "../utils/mailTemplates.js";
 
 const registerUser = async (req, res, next) => {
   try {
@@ -250,11 +255,26 @@ const forgotPassword = async (req, res, next) => {
   try {
     const user = await db("users").where({ email }).first();
     if (!user) {
-      return next(new ErrorHandler("User not found", 404));
+      return next(new ErrorHandler("Enter a registered email address", 404));
     }
+    // console.log(user, 243);
+    // return false;
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-      expiresIn: "10m",
+      expiresIn: "5m",
     });
+    const sentEmail = await sendMail({
+      to: email,
+      subject: "Reset Password",
+      text: `Hello ${user.user_name},You requested a password reset`,
+      html: resetPassword({ email, user_name: user.user_name, token }),
+    });
+    console.log(sentEmail, 229);
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "Password reset link sent successfully",
+      status: "success",
+    });
+    return res.status(200).json(apiResponse);
   } catch (error) {
     console.log(error, 253);
     return next(new ErrorHandler("Internal Server Error", 500));
@@ -264,6 +284,7 @@ const forgotPassword = async (req, res, next) => {
 const sendResetPasswordPage = async (req, res, next) => {
   const { email, token } = req.params;
   try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     ejs.renderFile(
@@ -271,6 +292,7 @@ const sendResetPasswordPage = async (req, res, next) => {
       { email, token },
       (err, data) => {
         if (err) {
+          console.log(err, 170);
           return next(
             new ErrorHandler("Error rendering reset password page", 500)
           );
@@ -280,14 +302,41 @@ const sendResetPasswordPage = async (req, res, next) => {
     );
   } catch (error) {
     console.log(error, 179);
+    if (error.message === "jwt expired") {
+      return res.send(linkExpiredTemplate());
+    }
     return next(new ErrorHandler("Something went wrong", 500));
   }
 };
 
 const verifyAndResetPassword = async (req, res, next) => {
   const { email, password } = req.body;
+  const { token } = req.params;
+  // console.log(email, password, token, 177);
   try {
-  } catch (error) {}
+    const user = await db("users").where({ email }).first();
+    if (!user) {
+      return next(new ErrorHandler("Invalid Request", 400));
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.email !== email) {
+      return next(new ErrorHandler("Invalid Request", 400));
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db("users").where({ email }).update({ password: hashedPassword });
+    const apiResponse = new APIResponse({
+      status_code: 200,
+      message: "Password reset successfully",
+      status: "success",
+    });
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.log(error, 185);
+    if (error.message === "jwt expired") {
+      return next(new ErrorHandler("Link expired", 401));
+    }
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
 };
 export {
   registerUser,
