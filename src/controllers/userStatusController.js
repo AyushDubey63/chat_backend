@@ -64,14 +64,7 @@ const getUserStatus = async (req, res, next) => {
   try {
     const status = await db("user_status as us")
       .where("us.user_id", user_id)
-      .leftJoin("users as u", "us.user_id", "u.user_id")
-      .select(
-        "us.status_id",
-        "us.type",
-        "us.data",
-        "us.created_at",
-        "u.profile_pic"
-      );
+      .select("us.status_id", "us.type", "us.data", "us.created_at");
     if (status.length === 0) {
       const apiResponse = new APIResponse({
         status_code: 200,

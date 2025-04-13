@@ -52,7 +52,7 @@ const getChatMessagesByChatId = async (req, res, next) => {
 
 const getUserAllChats = async (req, res, next) => {
   const userId = req.userId;
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 20, search = "" } = req.query;
   const skip = parseInt((page - 1) * limit);
 
   try {
@@ -60,10 +60,10 @@ const getUserAllChats = async (req, res, next) => {
       .select("user_name", "email", "first_name", "last_name", "profile_pic")
       .where("user_id", userId)
       .first();
-    console.log(user, 61);
+
     console.time("user_chats");
 
-    // Base query with DISTINCT ON logic
+    // Base query
     const baseQuery = db
       .select(
         db.raw(
@@ -90,12 +90,28 @@ const getUserAllChats = async (req, res, next) => {
       .andWhere((builder) =>
         builder.where("c.type", "group").orWhere("cp2.user_id", "!=", userId)
       )
+      .modify((queryBuilder) => {
+        if (search) {
+          queryBuilder.andWhere((builder) =>
+            builder
+              .whereILike("gp.group_name", `%${search}%`)
+              .orWhereILike("u.user_name", `%${search}%`)
+          );
+        }
+      })
       .orderBy("c.id")
       .orderByRaw("u.user_id NULLS LAST");
 
-    // Count query (without limit and offset)
+    // Count query
     const countQuery = db("chat_participants as cp")
       .join("chats as c", "cp.chat_id", "c.id")
+      .leftJoin("chat_participants as cp2", "cp2.chat_id", "c.id")
+      .leftJoin("users as u", function () {
+        this.on("cp2.user_id", "u.user_id").andOnVal("c.type", "direct");
+      })
+      .leftJoin("groups as gp", function () {
+        this.on("c.id", "gp.chat_id").andOnVal("c.type", "group");
+      })
       .where("cp.user_id", userId)
       .andWhere((builder) =>
         builder.where("c.type", "group").orWhereExists(function () {
@@ -105,17 +121,24 @@ const getUserAllChats = async (req, res, next) => {
             .whereNot("cp2.user_id", userId);
         })
       )
+      .modify((queryBuilder) => {
+        if (search) {
+          queryBuilder.andWhere((builder) =>
+            builder
+              .whereILike("gp.group_name", `%${search}%`)
+              .orWhereILike("u.user_name", `%${search}%`)
+          );
+        }
+      })
       .countDistinct("c.id as total_chats")
       .first();
 
-    // Get paginated results
     const result = await baseQuery
       .clone()
       .limit(parseInt(limit))
       .offset(skip)
       .debug(true);
 
-    // Get total chat count
     const countResult = await countQuery;
 
     console.timeEnd("user_chats");
@@ -130,13 +153,12 @@ const getUserAllChats = async (req, res, next) => {
       return res.status(200).json(apiResponse);
     }
 
-    // Prepare response data
     const responseData = {
       user: user,
       chats: result,
       total_chats: countResult ? countResult.total_chats : 0,
       total_pages: Math.ceil(countResult.total_chats / limit),
-      current_page: page,
+      current_page: parseInt(page),
     };
 
     const apiResponse = new APIResponse({
