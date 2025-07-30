@@ -5,6 +5,7 @@ class SocketHandler {
   constructor() {
     this.socket = null;
     this.socketIOMapping = new Map(); // Maps user_id to socket ID
+    this.callMap = new Map(); // Maps call_id to socket ID
   }
 
   // Set the Socket.io instance
@@ -199,6 +200,23 @@ class SocketHandler {
             error: "Failed to process notification",
           });
         }
+      });
+
+      socket.on("video_call", async ({ chat_id, offer }) => {
+        this.callMap.set(chat_id, offer);
+        const chatParticipants = await db("chat_participants").where({
+          chat_id,
+        });
+
+        chatParticipants.forEach((participant) => {
+          const socketId = this.socketIOMapping.get(participant.user_id);
+          if (socketId) {
+            io.to(socketId).emit("video_call", {
+              chat_id,
+              offer: this.callMap.get(chat_id),
+            });
+          }
+        });
       });
 
       // Handle user disconnect
