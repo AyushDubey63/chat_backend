@@ -21,7 +21,10 @@ class SocketHandler {
         return;
       }
 
-      const token = cookie.split("=")[1];
+      const token = cookie
+        .split("; ")
+        .find((c) => c.startsWith("token="))
+        ?.split("=")[1];
       if (!token) {
         console.error("Token is missing in the cookie");
         return;
@@ -31,7 +34,7 @@ class SocketHandler {
         console.log(String(token), 28);
         console.log(decryptData(String(token)), 29);
         userid = jwt.verify(decryptData(token), process.env.JWT_SECRET);
-        console.log(userid);
+        console.log(userid, 34);
         this.userMapping(userid.userId, socket.id);
       } catch (error) {
         console.error("Error verifying JWT:", error);
@@ -202,8 +205,9 @@ class SocketHandler {
         }
       });
 
-      socket.on("video_call", async ({ chat_id, offer }) => {
+      socket.on("video_call", async ({ chat_id, offer, type }) => {
         this.callMap.set(chat_id, { offer, type });
+        console.log("Video call initiated:", chat_id, offer, type);
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
@@ -212,9 +216,37 @@ class SocketHandler {
           const socketId = this.socketIOMapping.get(participant.user_id);
           if (socketId) {
             const { offer, type } = this.callMap.get(chat_id);
-            io.to(socketId).emit("video_call", {
+            socket.to(socketId).emit("video_call", {
               chat_id,
               offer,
+              type,
+            });
+          }
+        });
+      });
+
+      socket.on("ice_candidate", async ({ chat_id, candidate, type }) => {
+        console.log("ICE candidate received:", chat_id, candidate, type);
+        const chatParticipants = await db("chat_participants").where({
+          chat_id,
+        });
+        console.log(chatParticipants, 230);
+        console.log(this.socketIOMapping, 231);
+        chatParticipants.forEach((participant) => {
+          const socketId = this.socketIOMapping.get(participant.user_id);
+          console.log(this.socketIOMapping, 232);
+          console.log(socketId, 234);
+          // ✅ Skip sending back to sender
+          if (socketId && socketId !== socket.id) {
+            console.log(
+              "Sending ICE candidate to:",
+              socketId,
+              "from",
+              socket.id
+            );
+            socket.to(socketId).emit("ice_candidate", {
+              chat_id,
+              candidate,
               type,
             });
           }
