@@ -204,50 +204,52 @@ class SocketHandler {
           });
         }
       });
-
-      socket.on("video_call", async ({ chat_id, offer, type }) => {
-        this.callMap.set(chat_id, { offer, type });
-        console.log("Video call initiated:", chat_id, offer, type);
+      socket.on("user:call", async ({ chat_id, offer }) => {
+        console.log("received call for chat id ", chat_id);
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
-
         chatParticipants.forEach((participant) => {
-          const socketId = this.socketIOMapping.get(participant.user_id);
-          if (socketId) {
-            const { offer, type } = this.callMap.get(chat_id);
-            socket.to(socketId).emit("video_call", {
+          const recepientSocketId = this.socketIOMapping.get(
+            participant.user_id
+          );
+          if (recepientSocketId && recepientSocketId !== socket.id) {
+            io.to(recepientSocketId).emit("incoming:call", {
               chat_id,
               offer,
-              type,
+            });
+          }
+        });
+      });
+      socket.on("call:accepted", async ({ chat_id, answer }) => {
+        const chatParticipants = await db("chat_participants").where({
+          chat_id,
+        });
+        chatParticipants.forEach((participant) => {
+          const recepientSocketId = this.socketIOMapping.get(
+            participant.user_id
+          );
+          if (recepientSocketId && recepientSocketId !== socket.id) {
+            io.to(recepientSocketId).emit("call:accepted", {
+              chat_id,
+              answer,
             });
           }
         });
       });
 
-      socket.on("ice_candidate", async ({ chat_id, candidate, type }) => {
-        console.log("ICE candidate received:", chat_id, candidate, type);
+      socket.on("ice:candidate", async ({ candidate, chat_id }) => {
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
-        console.log(chatParticipants, 230);
-        console.log(this.socketIOMapping, 231);
         chatParticipants.forEach((participant) => {
-          const socketId = this.socketIOMapping.get(participant.user_id);
-          console.log(this.socketIOMapping, 232);
-          console.log(socketId, 234);
-          // ✅ Skip sending back to sender
-          if (socketId && socketId !== socket.id) {
-            console.log(
-              "Sending ICE candidate to:",
-              socketId,
-              "from",
-              socket.id
-            );
-            socket.to(socketId).emit("ice_candidate", {
-              chat_id,
+          const recepientSocketId = this.socketIOMapping.get(
+            participant.user_id
+          );
+          if (recepientSocketId && recepientSocketId !== socket.id) {
+            io.to(recepientSocketId).emit("ice:candidate", {
               candidate,
-              type,
+              chat_id,
             });
           }
         });
