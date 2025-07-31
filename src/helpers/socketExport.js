@@ -203,7 +203,7 @@ class SocketHandler {
       });
 
       socket.on("video_call", async ({ chat_id, offer }) => {
-        this.callMap.set(chat_id, offer);
+        this.callMap.set(chat_id, { offer, type });
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
@@ -211,9 +211,11 @@ class SocketHandler {
         chatParticipants.forEach((participant) => {
           const socketId = this.socketIOMapping.get(participant.user_id);
           if (socketId) {
+            const { offer, type } = this.callMap.get(chat_id);
             io.to(socketId).emit("video_call", {
               chat_id,
-              offer: this.callMap.get(chat_id),
+              offer,
+              type,
             });
           }
         });
