@@ -205,15 +205,23 @@ class SocketHandler {
         }
       });
       socket.on("user:call", async ({ chat_id, offer }) => {
-        console.log("received call for chat id ", chat_id);
+        console.log("received call for chat id ", chat_id, offer, socket.id);
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
+        console.log(this.socketIOMapping, 212, chat_id);
         chatParticipants.forEach((participant) => {
           const recepientSocketId = this.socketIOMapping.get(
             participant.user_id
           );
           if (recepientSocketId && recepientSocketId !== socket.id) {
+            console.log(
+              "Emitting call to recepient",
+              recepientSocketId,
+              participant.user_id,
+              "from",
+              userid
+            );
             io.to(recepientSocketId).emit("incoming:call", {
               chat_id,
               offer,
@@ -222,6 +230,7 @@ class SocketHandler {
         });
       });
       socket.on("call:accepted", async ({ chat_id, answer }) => {
+        console.log("Call accepted:", chat_id, answer, socket.id);
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
@@ -239,6 +248,7 @@ class SocketHandler {
       });
 
       socket.on("ice:candidate", async ({ candidate, chat_id }) => {
+        console.log("ICE candidate received:", chat_id, candidate, socket.id);
         const chatParticipants = await db("chat_participants").where({
           chat_id,
         });
