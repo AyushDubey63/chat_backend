@@ -222,7 +222,7 @@ class SocketHandler {
               "from",
               userid
             );
-            io.to(recepientSocketId).emit("incoming:call", {
+            io.to(recepientSocketId).emit("call:incoming", {
               chat_id,
               offer,
             });
