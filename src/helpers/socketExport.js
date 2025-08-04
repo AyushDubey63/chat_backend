@@ -214,6 +214,7 @@ class SocketHandler {
           .where({ user_id: userid.userId })
           .select("user_name", "profile_pic")
           .first();
+        console.log(user, 217);
         chatParticipants.forEach((participant) => {
           const recepientSocketId = this.socketIOMapping.get(
             participant.user_id
