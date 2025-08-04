@@ -210,6 +210,10 @@ class SocketHandler {
           chat_id,
         });
         console.log(this.socketIOMapping, 212, chat_id);
+        const user = await db("users")
+          .where({ user_id: userid.userId })
+          .select("user_name", "profile_pic")
+          .first();
         chatParticipants.forEach((participant) => {
           const recepientSocketId = this.socketIOMapping.get(
             participant.user_id
@@ -225,6 +229,7 @@ class SocketHandler {
             io.to(recepientSocketId).emit("call:incoming", {
               chat_id,
               offer,
+              user,
             });
           }
         });
@@ -242,6 +247,23 @@ class SocketHandler {
             io.to(recepientSocketId).emit("call:accepted", {
               chat_id,
               answer,
+            });
+          }
+        });
+      });
+
+      socket.on("call:declined", async ({ chat_id }) => {
+        console.log("Call declined:", chat_id, socket.id);
+        const chatParticipants = await db("chat_participants").where({
+          chat_id,
+        });
+        chatParticipants.forEach((participant) => {
+          const recepientSocketId = this.socketIOMapping.get(
+            participant.user_id
+          );
+          if (recepientSocketId && recepientSocketId !== socket.id) {
+            io.to(recepientSocketId).emit("call:declined", {
+              chat_id,
             });
           }
         });
