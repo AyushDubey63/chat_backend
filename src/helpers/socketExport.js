@@ -288,6 +288,23 @@ class SocketHandler {
         });
       });
 
+      socket.on("call:ended", async ({ chat_id }) => {
+        console.log("Call ended:", chat_id, socket.id);
+        const chatParticipants = await db("chat_participants").where({
+          chat_id,
+        });
+        chatParticipants.forEach((participant) => {
+          const recepientSocketId = this.socketIOMapping.get(
+            participant.user_id
+          );
+          if (recepientSocketId && recepientSocketId !== socket.id) {
+            io.to(recepientSocketId).emit("call:ended", {
+              chat_id,
+            });
+          }
+        });
+      });
+
       // Handle user disconnect
       socket.on("disconnect", () => {
         console.log("User disconnected:", socket.id);
